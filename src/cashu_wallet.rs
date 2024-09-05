@@ -5,7 +5,7 @@ pub struct CashuWallet {
 }
 
 impl CashuWallet {
-    pub fn new_from_env() -> Result<Self> {
+    pub async fn new_from_env() -> Result<Self> {
         let secret: [u8; 32] = match env::var("CASHU_SECRET")
             .context("CASHU_SECRET not found")?
             .as_str()
@@ -31,8 +31,9 @@ impl CashuWallet {
         let mint_url = env::var("MINT_URL").context("MINT_URL not set")?;
         let unit = CurrencyUnit::Sat;
 
-        let localstore = WalletMemoryDatabase::default();
-        let wallet = Wallet::new(mint_url, unit, Arc::new(localstore), &seed, None);
-        Self {}
+        let db = WalletSqliteDatabase::new(&Path::new(&env::var("CASHU_WALLET_SQLITE_DB_PATH")?))
+            .await?;
+        let cdk_wallet = Wallet::new(&mint_url, unit, Arc::new(db), &secret, None);
+        Ok(Self { cdk_wallet })
     }
 }
