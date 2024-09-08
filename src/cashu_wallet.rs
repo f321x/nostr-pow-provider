@@ -36,4 +36,13 @@ impl CashuWallet {
         let cdk_wallet = Wallet::new(&mint_url, unit, Arc::new(db), &secret, None);
         Ok(Self { cdk_wallet })
     }
+
+    pub async fn receive(&self, token: &str) -> Result<u64, String> {
+        let amount_receive = self
+            .cdk_wallet
+            .receive(token, SplitTarget::default(), &[], &[])
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(amount_receive.into())
+    }
 }

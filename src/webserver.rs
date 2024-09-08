@@ -6,16 +6,19 @@ struct QuoteResponse {
     preferred_mint_url: String,
 }
 
+#[derive(Deserialize)]
+pub struct PoWRequest {
+    pub event: nostr_sdk::UnsignedEvent,
+    pub ecash: String,
+    pub leading_zeros: u8,
+}
+
 // request a new pow task
 async fn request_pow(
     Extension(provider): Extension<Arc<Provider>>,
-    headers: HeaderMap,
-) -> Result<StatusCode, StatusCode> {
-    let cashu_token = match headers.get("cashu-token") {
-        Some(token) => token.to_str().map_err(|_| StatusCode::BAD_REQUEST)?,
-        None => return Err(StatusCode::BAD_REQUEST),
-    };
-    Ok(StatusCode::OK)
+    Json(pow_request): Json<PoWRequest>,
+) -> Result<StatusCode, (StatusCode, String)> {
+    provider.handle_request(pow_request).await
 }
 
 // fetch the status of a pow task
