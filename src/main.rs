@@ -1,25 +1,32 @@
 mod cashu_wallet;
+mod hasher;
+mod provider;
 mod webserver;
 
 use anyhow::{anyhow, Context, Result};
 use axum::{http::*, routing::*, Extension, Json, Router};
 use cashu_wallet::CashuWallet;
-use cdk::{nuts::*, wallet::*};
+use cdk::{amount::*, nuts::*, wallet::*};
 use cdk_sqlite::WalletSqliteDatabase;
 use dotenvy::dotenv;
+use hasher::Hasher;
 #[allow(unused_imports)]
 use log::{debug, error, info, trace, warn};
+use nostr_sdk::prelude::*;
+use provider::*;
 use rand::Rng;
-use serde::Serialize;
-use std::{env, net::SocketAddr, path::Path, sync::Arc};
+use rayon::prelude::*;
+use serde::{Deserialize, Serialize};
+use std::{
+    collections::HashMap,
+    env,
+    net::SocketAddr,
+    path::Path,
+    sync::{Arc, Mutex},
+    time::{Duration, Instant},
+};
 use tokio::net::TcpListener;
-use webserver::api_server;
-
-pub struct Provider {
-    pub base_hashprice: u64,
-    pub mint_url: String,
-    pub wallet: Arc<CashuWallet>,
-}
+use webserver::*;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,6 +40,7 @@ async fn main() -> Result<()> {
         base_hashprice: env::var("BASE_QUOTE_SAT_POW_20")?.parse()?,
         mint_url: env::var("CASHU_MINT_URL")?,
         wallet,
+        hasher: Hasher::new(),
     });
 
     api_server(provider).await?;
